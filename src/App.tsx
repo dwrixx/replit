@@ -1,113 +1,113 @@
 // src/App.tsx
 import React, { useState } from "react";
+import Header from "./components/Header";
 import Canvas from "./components/Canvas";
-import SettingsPanel from "./components/SettingsPanel";
-import BoardSelector from "./components/BoardSelector";
+import AIImageGenerator from "./components/AIImageGenerator";
 
-interface Embed {
-  id: number;
-  videoUrl: string;
+interface BoardItem {
+  id: string;
+  type: "image" | "text" | "video";
+  content: string;
   position: { x: number; y: number };
   size: { width: number; height: number };
 }
 
-interface Board {
-  id: number;
-  name: string;
-  embeds: Embed[];
-}
-
 const App: React.FC = () => {
-  const [boards, setBoards] = useState<Board[]>([
-    { id: 1, name: "Board 1", embeds: [] },
-  ]);
-  const [currentBoardId, setCurrentBoardId] = useState(1);
+  const [boardItems, setBoardItems] = useState<BoardItem[]>([]);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
 
-  const handleAddEmbed = (videoUrl: string) => {
-    setBoards((prevBoards) =>
-      prevBoards.map((board) =>
-        board.id === currentBoardId
-          ? {
-              ...board,
-              embeds: [
-                ...board.embeds,
-                {
-                  id: Date.now(),
-                  videoUrl,
-                  position: {
-                    x: board.embeds.length * 50,
-                    y: board.embeds.length * 50,
-                  },
-                  size: { width: 560, height: 315 },
-                },
-              ],
-            }
-          : board,
+  const addBoardItem = (item: BoardItem) => {
+    setBoardItems([...boardItems, item]);
+  };
+
+  const updateBoardItem = (id: string, updates: Partial<BoardItem>) => {
+    setBoardItems(
+      boardItems.map((item) =>
+        item.id === id ? { ...item, ...updates } : item,
       ),
     );
   };
 
-  const handleNewBoard = (name: string) => {
-    const newBoard = {
-      id: Date.now(),
-      name,
-      embeds: [],
-    };
-    setBoards([...boards, newBoard]);
-    setCurrentBoardId(newBoard.id);
+  const deleteBoardItem = (id: string) => {
+    setBoardItems(boardItems.filter((item) => item.id !== id));
   };
 
-  const handleEmbedChange = (
-    embedId: number,
-    position: { x: number; y: number },
-    size: { width: number; height: number },
-  ) => {
-    setBoards((prevBoards) =>
-      prevBoards.map((board) =>
-        board.id === currentBoardId
-          ? {
-              ...board,
-              embeds: board.embeds.map((embed) =>
-                embed.id === embedId ? { ...embed, position, size } : embed,
-              ),
-            }
-          : board,
-      ),
-    );
+  const handleUploadImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        addBoardItem({
+          id: Date.now().toString(),
+          type: "image",
+          content: e.target?.result as string,
+          position: { x: 0, y: 0 },
+          size: { width: 200, height: 200 },
+        });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleBoardChange = (boardId: number) => {
-    setCurrentBoardId(boardId);
+  const handleAddText = () => {
+    addBoardItem({
+      id: Date.now().toString(),
+      type: "text",
+      content: "New Text",
+      position: { x: 0, y: 0 },
+      size: { width: 200, height: 100 },
+    });
   };
 
-  const currentBoard = boards.find((board) => board.id === currentBoardId);
+  const handleAddVideo = () => {
+    const videoUrl = prompt("Enter YouTube video URL:");
+    if (videoUrl) {
+      addBoardItem({
+        id: Date.now().toString(),
+        type: "video",
+        content: videoUrl,
+        position: { x: 0, y: 0 },
+        size: { width: 320, height: 180 },
+      });
+    }
+  };
+
+  const handleSaveBoard = () => {
+    // Implement save functionality here
+    console.log("Saving board:", boardItems);
+  };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      <header className="bg-blue-600 text-white p-4">
-        <h1 className="text-2xl font-bold">YouTube Board App</h1>
-      </header>
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-1/4 p-4 bg-white shadow-md overflow-y-auto">
-          <SettingsPanel
-            onAddEmbed={handleAddEmbed}
-            onNewBoard={handleNewBoard}
-          />
-          <BoardSelector
-            boards={boards}
-            currentBoardId={currentBoardId}
-            onBoardChange={handleBoardChange}
-          />
-        </div>
-        <div className="w-3/4 p-4">
-          {currentBoard && (
-            <Canvas
-              embeds={currentBoard.embeds}
-              onEmbedChange={handleEmbedChange}
-            />
-          )}
-        </div>
+    <div className="flex flex-col h-screen bg-gray-900 text-white">
+      <Header
+        onUploadImage={handleUploadImage}
+        onAddText={handleAddText}
+        onAddVideo={handleAddVideo}
+        onAddAIImage={() => setShowAIGenerator(true)}
+        onSaveBoard={handleSaveBoard}
+      />
+      <div className="flex-1 overflow-hidden">
+        <Canvas
+          items={boardItems}
+          onUpdateItem={updateBoardItem}
+          onDeleteItem={deleteBoardItem}
+        />
       </div>
+      {showAIGenerator && (
+        <AIImageGenerator
+          onClose={() => setShowAIGenerator(false)}
+          onGenerate={(imageUrl) => {
+            addBoardItem({
+              id: Date.now().toString(),
+              type: "image",
+              content: imageUrl,
+              position: { x: 0, y: 0 },
+              size: { width: 200, height: 200 },
+            });
+            setShowAIGenerator(false);
+          }}
+        />
+      )}
     </div>
   );
 };
