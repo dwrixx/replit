@@ -1,8 +1,10 @@
-// src/App.tsx
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import Header from "./components/Header";
 import Canvas from "./components/Canvas";
 import AIImageGenerator from "./components/AIImageGenerator";
+import BoardSelector from "./components/BoardSelector";
+import SettingsPanel from "./components/SettingsPanel";
+import VideoModal from "./components/VideoModal"; // New import
 
 interface BoardItem {
   id: string;
@@ -12,25 +14,68 @@ interface BoardItem {
   size: { width: number; height: number };
 }
 
+interface Board {
+  id: number;
+  name: string;
+  items: BoardItem[];
+}
+
 const App: React.FC = () => {
-  const [boardItems, setBoardItems] = useState<BoardItem[]>([]);
+  const [boards, setBoards] = useState<Board[]>([
+    { id: 1, name: "Board 1", items: [] },
+  ]);
+  const [currentBoardId, setCurrentBoardId] = useState(1);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false); // New state
 
-  const addBoardItem = (item: BoardItem) => {
-    setBoardItems([...boardItems, item]);
-  };
+  const currentBoard = boards.find((board) => board.id === currentBoardId);
 
-  const updateBoardItem = (id: string, updates: Partial<BoardItem>) => {
-    setBoardItems(
-      boardItems.map((item) =>
-        item.id === id ? { ...item, ...updates } : item,
-      ),
-    );
-  };
+  const addBoardItem = useCallback(
+    (item: BoardItem) => {
+      setBoards((prevBoards) =>
+        prevBoards.map((board) =>
+          board.id === currentBoardId
+            ? { ...board, items: [...board.items, item] }
+            : board,
+        ),
+      );
+    },
+    [currentBoardId],
+  );
 
-  const deleteBoardItem = (id: string) => {
-    setBoardItems(boardItems.filter((item) => item.id !== id));
-  };
+  const updateBoardItem = useCallback(
+    (id: string, updates: Partial<BoardItem>) => {
+      setBoards((prevBoards) =>
+        prevBoards.map((board) =>
+          board.id === currentBoardId
+            ? {
+                ...board,
+                items: board.items.map((item) =>
+                  item.id === id ? { ...item, ...updates } : item,
+                ),
+              }
+            : board,
+        ),
+      );
+    },
+    [currentBoardId],
+  );
+
+  const deleteBoardItem = useCallback(
+    (id: string) => {
+      setBoards((prevBoards) =>
+        prevBoards.map((board) =>
+          board.id === currentBoardId
+            ? {
+                ...board,
+                items: board.items.filter((item) => item.id !== id),
+              }
+            : board,
+        ),
+      );
+    },
+    [currentBoardId],
+  );
 
   const handleUploadImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -41,7 +86,7 @@ const App: React.FC = () => {
           id: Date.now().toString(),
           type: "image",
           content: e.target?.result as string,
-          position: { x: 0, y: 0 },
+          position: { x: 50, y: 50 },
           size: { width: 200, height: 200 },
         });
       };
@@ -54,27 +99,39 @@ const App: React.FC = () => {
       id: Date.now().toString(),
       type: "text",
       content: "New Text",
-      position: { x: 0, y: 0 },
+      position: { x: 50, y: 50 },
       size: { width: 200, height: 100 },
     });
   };
 
-  const handleAddVideo = () => {
-    const videoUrl = prompt("Enter YouTube video URL:");
-    if (videoUrl) {
-      addBoardItem({
-        id: Date.now().toString(),
-        type: "video",
-        content: videoUrl,
-        position: { x: 0, y: 0 },
-        size: { width: 320, height: 180 },
-      });
-    }
+  const handleAddVideo = (videoUrl: string) => {
+    addBoardItem({
+      id: Date.now().toString(),
+      type: "video",
+      content: videoUrl,
+      position: { x: 50, y: 50 },
+      size: { width: 320, height: 180 },
+    });
+    setShowVideoModal(false); // Close the modal after adding
   };
 
   const handleSaveBoard = () => {
-    // Implement save functionality here
-    console.log("Saving board:", boardItems);
+    console.log("Saving board:", currentBoard);
+    // Implement actual save functionality here
+  };
+
+  const handleNewBoard = (name: string) => {
+    const newBoard: Board = {
+      id: Date.now(),
+      name,
+      items: [],
+    };
+    setBoards([...boards, newBoard]);
+    setCurrentBoardId(newBoard.id);
+  };
+
+  const handleBoardChange = (boardId: number) => {
+    setCurrentBoardId(boardId);
   };
 
   return (
@@ -82,16 +139,26 @@ const App: React.FC = () => {
       <Header
         onUploadImage={handleUploadImage}
         onAddText={handleAddText}
-        onAddVideo={handleAddVideo}
+        onAddVideo={() => setShowVideoModal(true)} // Modified to open modal
         onAddAIImage={() => setShowAIGenerator(true)}
         onSaveBoard={handleSaveBoard}
       />
-      <div className="flex-1 overflow-hidden">
-        <Canvas
-          items={boardItems}
-          onUpdateItem={updateBoardItem}
-          onDeleteItem={deleteBoardItem}
-        />
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-64 bg-gray-800 p-4 overflow-y-auto">
+          <BoardSelector
+            boards={boards}
+            currentBoardId={currentBoardId}
+            onBoardChange={handleBoardChange}
+          />
+          <SettingsPanel onNewBoard={handleNewBoard} />
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <Canvas
+            items={currentBoard?.items || []}
+            onUpdateItem={updateBoardItem}
+            onDeleteItem={deleteBoardItem}
+          />
+        </div>
       </div>
       {showAIGenerator && (
         <AIImageGenerator
@@ -101,11 +168,17 @@ const App: React.FC = () => {
               id: Date.now().toString(),
               type: "image",
               content: imageUrl,
-              position: { x: 0, y: 0 },
+              position: { x: 50, y: 50 },
               size: { width: 200, height: 200 },
             });
             setShowAIGenerator(false);
           }}
+        />
+      )}
+      {showVideoModal && (
+        <VideoModal
+          onClose={() => setShowVideoModal(false)}
+          onAddVideo={handleAddVideo}
         />
       )}
     </div>

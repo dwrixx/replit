@@ -1,4 +1,3 @@
-// src/components/Header.tsx
 import React from "react";
 
 interface HeaderProps {
@@ -46,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={onAddAIImage}
             className="bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded"
           >
-            Add AI Image Generator
+            Add AI Image
           </button>
           <button
             onClick={onSaveBoard}

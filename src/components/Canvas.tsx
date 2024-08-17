@@ -1,4 +1,3 @@
-// src/components/Canvas.tsx
 import React from "react";
 import { Rnd } from "react-rnd";
 
@@ -28,23 +27,31 @@ const Canvas: React.FC<CanvasProps> = ({
           <img
             src={item.content}
             alt=""
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         );
       case "text":
         return (
-          <div className="w-full h-full p-2 bg-white text-black">
-            {item.content}
+          <div className="w-full h-full p-2 bg-white text-black overflow-auto">
+            <textarea
+              className="w-full h-full resize-none border-none outline-none"
+              value={item.content}
+              onChange={(e) =>
+                onUpdateItem(item.id, { content: e.target.value })
+              }
+            />
           </div>
         );
       case "video":
         return (
-          <iframe
-            src={`https://www.youtube.com/embed/${getYouTubeVideoId(item.content)}`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="w-full h-full"
-          />
+          <div className="w-full h-full">
+            <iframe
+              src={`https://www.youtube.com/embed/${getYouTubeVideoId(item.content)}`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
         );
       default:
         return null;
@@ -59,7 +66,7 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   return (
-    <div className="w-full h-full bg-gray-700 relative">
+    <div className="w-full h-full bg-gray-200 relative">
       {items.map((item) => (
         <Rnd
           key={item.id}
@@ -70,20 +77,30 @@ const Canvas: React.FC<CanvasProps> = ({
           }
           onResizeStop={(e, direction, ref, delta, position) =>
             onUpdateItem(item.id, {
-              size: { width: ref.style.width, height: ref.style.height },
+              size: {
+                width: parseInt(ref.style.width),
+                height: parseInt(ref.style.height),
+              },
               position,
             })
           }
+          bounds="parent"
           className="bg-white shadow-lg"
+          dragHandleClassName="drag-handle"
         >
           <div className="w-full h-full relative">
-            {renderItem(item)}
-            <button
-              onClick={() => onDeleteItem(item.id)}
-              className="absolute top-0 right-0 bg-red-500 text-white p-1 text-xs"
-            >
-              ×
-            </button>
+            <div className="drag-handle absolute top-0 left-0 right-0 h-6 bg-gray-200 cursor-move flex items-center justify-between px-2">
+              <span className="text-xs font-bold text-gray-700">
+                {item.type.toUpperCase()}
+              </span>
+              <button
+                onClick={() => onDeleteItem(item.id)}
+                className="bg-red-500 text-white p-1 text-xs rounded"
+              >
+                ×
+              </button>
+            </div>
+            <div className="mt-6 h-[calc(100%-1.5rem)]">{renderItem(item)}</div>
           </div>
         </Rnd>
       ))}
