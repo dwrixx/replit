@@ -1,4 +1,3 @@
-// App.tsx
 import React, { useState, useCallback } from "react";
 import Header from "./components/Header";
 import Canvas from "./components/Canvas";
@@ -126,6 +125,20 @@ const App: React.FC = () => {
     setShowVideoModal(false);
   };
 
+  const handleGenerateAIImage = (
+    imageUrl: string,
+    position: { x: number; y: number },
+  ) => {
+    addBoardItem({
+      id: Date.now().toString(),
+      type: "image",
+      content: imageUrl,
+      position,
+      size: { width: 200, height: 200 },
+      zIndex: 0,
+    });
+  };
+
   const handleSaveBoard = () => {
     console.log("Saving board:", currentBoard);
     // Implement actual save functionality here
@@ -197,7 +210,7 @@ const App: React.FC = () => {
         onToggleSettings={() => setShowSettings(!showSettings)}
       />
       <div
-        className="flex-1 overflow-hidden"
+        className="flex-1 overflow-hidden relative"
         style={{ height: `calc(100vh - ${headerHeight}px)` }}
       >
         {showBoardSelector && (
@@ -234,23 +247,13 @@ const App: React.FC = () => {
             headerHeight={headerHeight}
           />
         </div>
+        {showAIGenerator && (
+          <AIImageGenerator
+            onGenerate={handleGenerateAIImage}
+            onClose={() => setShowAIGenerator(false)}
+          />
+        )}
       </div>
-      {showAIGenerator && (
-        <AIImageGenerator
-          onClose={() => setShowAIGenerator(false)}
-          onGenerate={(imageUrl) => {
-            addBoardItem({
-              id: Date.now().toString(),
-              type: "image",
-              content: imageUrl,
-              position: { x: 50, y: 50 },
-              size: { width: 200, height: 200 },
-              zIndex: 0,
-            });
-            setShowAIGenerator(false);
-          }}
-        />
-      )}
       {showVideoModal && (
         <VideoModal
           onClose={() => setShowVideoModal(false)}

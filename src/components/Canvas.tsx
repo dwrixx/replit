@@ -3,7 +3,7 @@ import { Rnd } from "react-rnd";
 
 interface BoardItem {
   id: string;
-  type: "image" | "text" | "video";
+  type: "image" | "text" | "video" | "ai-image-loading";
   content: string;
   position: { x: number; y: number };
   size: { width: number; height: number };
@@ -38,6 +38,13 @@ const Canvas: React.FC<CanvasProps> = ({
     },
     [onUpdateItem],
   );
+
+  const getYouTubeVideoId = useCallback((url: string) => {
+    const regExp =
+      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11 ? match[2] : null;
+  }, []);
 
   const renderItem = useCallback(
     (item: BoardItem) => {
@@ -78,19 +85,18 @@ const Canvas: React.FC<CanvasProps> = ({
               />
             </div>
           );
+        case "ai-image-loading":
+          return (
+            <div className="w-full h-full flex items-center justify-center bg-gray-200">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900"></div>
+            </div>
+          );
         default:
           return null;
       }
     },
-    [onUpdateItem],
+    [onUpdateItem, getYouTubeVideoId],
   );
-
-  const getYouTubeVideoId = useCallback((url: string) => {
-    const regExp =
-      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return match && match[2].length === 11 ? match[2] : null;
-  }, []);
 
   const memoizedItems = useMemo(() => items, [items]);
 
@@ -112,7 +118,6 @@ const Canvas: React.FC<CanvasProps> = ({
             bringToFront(item.id);
           }}
           onDrag={(e, d) => {
-            // Update position in real-time for smoother dragging
             onUpdateItem(item.id, { position: { x: d.x, y: d.y } });
           }}
           onDragStop={() => {
@@ -123,7 +128,6 @@ const Canvas: React.FC<CanvasProps> = ({
             bringToFront(item.id);
           }}
           onResize={(e, direction, ref, delta, position) => {
-            // Update size in real-time for smoother resizing
             onUpdateItem(item.id, {
               size: {
                 width: parseInt(ref.style.width),
@@ -141,7 +145,7 @@ const Canvas: React.FC<CanvasProps> = ({
           }`}
           style={{
             zIndex: item.zIndex,
-            transition: "none", // Remove transition for instant updates
+            transition: "none",
           }}
           dragHandleClassName="drag-handle"
           enableUserSelectHack={false}
