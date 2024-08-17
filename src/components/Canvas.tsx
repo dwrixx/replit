@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Rnd } from "react-rnd";
 
 interface BoardItem {
@@ -7,6 +7,7 @@ interface BoardItem {
   content: string;
   position: { x: number; y: number };
   size: { width: number; height: number };
+  zIndex: number;
 }
 
 interface CanvasProps {
@@ -23,54 +24,73 @@ const Canvas: React.FC<CanvasProps> = ({
   canvasSize,
 }) => {
   const [activeItem, setActiveItem] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [maxZIndex, setMaxZIndex] = useState(items.length);
 
-  const renderItem = (item: BoardItem) => {
-    switch (item.type) {
-      case "image":
-        return (
-          <img
-            src={item.content}
-            alt=""
-            className="w-full h-full object-contain"
-          />
-        );
-      case "text":
-        return (
-          <div className="w-full h-full p-2 bg-white text-black overflow-auto">
-            <div
-              dangerouslySetInnerHTML={{ __html: item.content }}
-              contentEditable
-              onBlur={(e) =>
-                onUpdateItem(item.id, { content: e.currentTarget.innerHTML })
-              }
-              className="w-full h-full outline-none"
-            />
-          </div>
-        );
-      case "video":
-        return (
-          <div className="w-full h-full">
-            <iframe
-              src={`https://www.youtube.com/embed/${getYouTubeVideoId(
-                item.content,
-              )}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            />
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+  const bringToFront = useCallback(
+    (id: string) => {
+      setMaxZIndex((prevMax) => {
+        const newZIndex = prevMax + 1;
+        onUpdateItem(id, { zIndex: newZIndex });
+        return newZIndex;
+      });
+    },
+    [onUpdateItem],
+  );
 
-  const getYouTubeVideoId = (url: string) => {
+  const renderItem = useCallback(
+    (item: BoardItem) => {
+      switch (item.type) {
+        case "image":
+          return (
+            <img
+              src={item.content}
+              alt=""
+              className="w-full h-full object-contain"
+              draggable={false}
+            />
+          );
+        case "text":
+          return (
+            <div className="w-full h-full p-2 bg-white text-black overflow-auto">
+              <div
+                dangerouslySetInnerHTML={{ __html: item.content }}
+                contentEditable
+                onBlur={(e) =>
+                  onUpdateItem(item.id, { content: e.currentTarget.innerHTML })
+                }
+                className="w-full h-full outline-none"
+              />
+            </div>
+          );
+        case "video":
+          return (
+            <div className="w-full h-full">
+              <iframe
+                src={`https://www.youtube.com/embed/${getYouTubeVideoId(
+                  item.content,
+                )}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+          );
+        default:
+          return null;
+      }
+    },
+    [onUpdateItem],
+  );
+
+  const getYouTubeVideoId = useCallback((url: string) => {
     const regExp =
       /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
     return match && match[2].length === 11 ? match[2] : null;
-  };
+  }, []);
+
+  const memoizedItems = useMemo(() => items, [items]);
 
   return (
     <div
@@ -80,15 +100,27 @@ const Canvas: React.FC<CanvasProps> = ({
         height: `${canvasSize.height}px`,
       }}
     >
-      {items.map((item) => (
+      {memoizedItems.map((item) => (
         <Rnd
           key={item.id}
           size={{ width: item.size.width, height: item.size.height }}
           position={{ x: item.position.x, y: item.position.y }}
-          onDragStart={() => setActiveItem(item.id)}
+          onDragStart={() => {
+            setActiveItem(item.id);
+            setIsDragging(true);
+            bringToFront(item.id);
+          }}
+          onDrag={() => {
+            if (!isDragging) setIsDragging(true);
+          }}
           onDragStop={(e, d) => {
             onUpdateItem(item.id, { position: { x: d.x, y: d.y } });
             setActiveItem(null);
+            setIsDragging(false);
+          }}
+          onResizeStart={() => {
+            setActiveItem(item.id);
+            bringToFront(item.id);
           }}
           onResizeStop={(e, direction, ref, delta, position) => {
             onUpdateItem(item.id, {
@@ -98,26 +130,43 @@ const Canvas: React.FC<CanvasProps> = ({
               },
               position,
             });
+            setActiveItem(null);
           }}
           bounds="parent"
-          className={`bg-white shadow-lg ${
-            activeItem === item.id ? "z-50" : "z-10"
+          className={`bg-white shadow-lg transition-all duration-200 ${
+            activeItem === item.id ? "ring-2 ring-blue-500" : ""
           }`}
+          style={{ zIndex: item.zIndex }}
           dragHandleClassName="drag-handle"
+          enableUserSelectHack={false}
+          resizeHandleStyles={{
+            bottomRight: { cursor: "se-resize" },
+            bottomLeft: { cursor: "sw-resize" },
+            topRight: { cursor: "ne-resize" },
+            topLeft: { cursor: "nw-resize" },
+          }}
         >
-          <div className="w-full h-full relative">
-            <div className="drag-handle absolute top-0 left-0 right-0 h-6 bg-gray-200 cursor-move flex items-center justify-between px-2">
+          <div
+            className="w-full h-full relative group"
+            onClick={() => bringToFront(item.id)}
+          >
+            <div className="drag-handle absolute -top-6 left-0 right-0 h-6 bg-gray-200 cursor-move flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <span className="text-xs font-bold text-gray-700">
                 {item.type.toUpperCase()}
               </span>
               <button
-                onClick={() => onDeleteItem(item.id)}
-                className="bg-red-500 text-white p-1 text-xs rounded"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteItem(item.id);
+                }}
+                className="bg-red-500 text-white p-1 text-xs rounded hover:bg-red-600 transition-colors"
               >
                 ×
               </button>
             </div>
-            <div className="mt-6 h-[calc(100%-1.5rem)]">{renderItem(item)}</div>
+            <div className="w-full h-full overflow-hidden">
+              {renderItem(item)}
+            </div>
           </div>
         </Rnd>
       ))}
