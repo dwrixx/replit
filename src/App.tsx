@@ -4,7 +4,7 @@ import Canvas from "./components/Canvas";
 import AIImageGenerator from "./components/AIImageGenerator";
 import BoardSelector from "./components/BoardSelector";
 import SettingsPanel from "./components/SettingsPanel";
-import VideoModal from "./components/VideoModal"; // New import
+import VideoModal from "./components/VideoModal";
 
 interface BoardItem {
   id: string;
@@ -26,7 +26,12 @@ const App: React.FC = () => {
   ]);
   const [currentBoardId, setCurrentBoardId] = useState(1);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
-  const [showVideoModal, setShowVideoModal] = useState(false); // New state
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showBoardSelector, setShowBoardSelector] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [font, setFont] = useState("Arial");
+  const [fontSize, setFontSize] = useState(16);
+  const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
 
   const currentBoard = boards.find((board) => board.id === currentBoardId);
 
@@ -112,7 +117,7 @@ const App: React.FC = () => {
       position: { x: 50, y: 50 },
       size: { width: 320, height: 180 },
     });
-    setShowVideoModal(false); // Close the modal after adding
+    setShowVideoModal(false);
   };
 
   const handleSaveBoard = () => {
@@ -134,29 +139,83 @@ const App: React.FC = () => {
     setCurrentBoardId(boardId);
   };
 
+  const handleFontChange = (newFont: string) => {
+    setFont(newFont);
+    // Apply font change to all text items
+    setBoards((prevBoards) =>
+      prevBoards.map((board) => ({
+        ...board,
+        items: board.items.map((item) =>
+          item.type === "text"
+            ? {
+                ...item,
+                content: `<span style="font-family: ${newFont};">${item.content}</span>`,
+              }
+            : item,
+        ),
+      })),
+    );
+  };
+
+  const handleFontSizeChange = (newSize: number) => {
+    setFontSize(newSize);
+    // Apply font size change to all text items
+    setBoards((prevBoards) =>
+      prevBoards.map((board) => ({
+        ...board,
+        items: board.items.map((item) =>
+          item.type === "text"
+            ? {
+                ...item,
+                content: `<span style="font-size: ${newSize}px;">${item.content}</span>`,
+              }
+            : item,
+        ),
+      })),
+    );
+  };
+
+  const handleCanvasSizeChange = (width: number, height: number) => {
+    setCanvasSize({ width, height });
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       <Header
         onUploadImage={handleUploadImage}
         onAddText={handleAddText}
-        onAddVideo={() => setShowVideoModal(true)} // Modified to open modal
+        onAddVideo={() => setShowVideoModal(true)}
         onAddAIImage={() => setShowAIGenerator(true)}
         onSaveBoard={handleSaveBoard}
+        onToggleBoardSelector={() => setShowBoardSelector(!showBoardSelector)}
+        onToggleSettings={() => setShowSettings(!showSettings)}
       />
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-64 bg-gray-800 p-4 overflow-y-auto">
-          <BoardSelector
-            boards={boards}
-            currentBoardId={currentBoardId}
-            onBoardChange={handleBoardChange}
-          />
-          <SettingsPanel onNewBoard={handleNewBoard} />
-        </div>
+        {showBoardSelector && (
+          <div className="absolute top-16 left-0 z-10 bg-gray-800 p-4 rounded-br-lg shadow-lg">
+            <BoardSelector
+              boards={boards}
+              currentBoardId={currentBoardId}
+              onBoardChange={handleBoardChange}
+            />
+          </div>
+        )}
+        {showSettings && (
+          <div className="absolute top-16 right-0 z-10 bg-gray-800 p-4 rounded-bl-lg shadow-lg">
+            <SettingsPanel
+              onNewBoard={handleNewBoard}
+              onFontChange={handleFontChange}
+              onFontSizeChange={handleFontSizeChange}
+              onCanvasSizeChange={handleCanvasSizeChange}
+            />
+          </div>
+        )}
         <div className="flex-1 overflow-hidden">
           <Canvas
             items={currentBoard?.items || []}
             onUpdateItem={updateBoardItem}
             onDeleteItem={deleteBoardItem}
+            canvasSize={canvasSize}
           />
         </div>
       </div>

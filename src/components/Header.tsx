@@ -6,6 +6,8 @@ interface HeaderProps {
   onAddVideo: () => void;
   onAddAIImage: () => void;
   onSaveBoard: () => void;
+  onToggleBoardSelector: () => void;
+  onToggleSettings: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -14,11 +16,27 @@ const Header: React.FC<HeaderProps> = ({
   onAddVideo,
   onAddAIImage,
   onSaveBoard,
+  onToggleBoardSelector,
+  onToggleSettings,
 }) => {
   return (
     <header className="bg-gray-800 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-blue-400">Flux Board</h1>
+        <div className="flex items-center space-x-4">
+          <h1 className="text-2xl font-bold text-blue-400">Flux Board</h1>
+          <button
+            onClick={onToggleBoardSelector}
+            className="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded"
+          >
+            Boards
+          </button>
+          <button
+            onClick={onToggleSettings}
+            className="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded"
+          >
+            Settings
+          </button>
+        </div>
         <div className="flex space-x-2">
           <label className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded cursor-pointer">
             Upload Image

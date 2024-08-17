@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Rnd } from "react-rnd";
 
 interface BoardItem {
@@ -13,13 +13,17 @@ interface CanvasProps {
   items: BoardItem[];
   onUpdateItem: (id: string, updates: Partial<BoardItem>) => void;
   onDeleteItem: (id: string) => void;
+  canvasSize: { width: number; height: number };
 }
 
 const Canvas: React.FC<CanvasProps> = ({
   items,
   onUpdateItem,
   onDeleteItem,
+  canvasSize,
 }) => {
+  const [activeItem, setActiveItem] = useState<string | null>(null);
+
   const renderItem = (item: BoardItem) => {
     switch (item.type) {
       case "image":
@@ -33,12 +37,13 @@ const Canvas: React.FC<CanvasProps> = ({
       case "text":
         return (
           <div className="w-full h-full p-2 bg-white text-black overflow-auto">
-            <textarea
-              className="w-full h-full resize-none border-none outline-none"
-              value={item.content}
-              onChange={(e) =>
-                onUpdateItem(item.id, { content: e.target.value })
+            <div
+              dangerouslySetInnerHTML={{ __html: item.content }}
+              contentEditable
+              onBlur={(e) =>
+                onUpdateItem(item.id, { content: e.currentTarget.innerHTML })
               }
+              className="w-full h-full outline-none"
             />
           </div>
         );
@@ -46,7 +51,9 @@ const Canvas: React.FC<CanvasProps> = ({
         return (
           <div className="w-full h-full">
             <iframe
-              src={`https://www.youtube.com/embed/${getYouTubeVideoId(item.content)}`}
+              src={`https://www.youtube.com/embed/${getYouTubeVideoId(
+                item.content,
+              )}`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               className="w-full h-full"
@@ -66,26 +73,36 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   return (
-    <div className="w-full h-full bg-gray-200 relative">
+    <div
+      className="relative bg-gray-200 overflow-auto"
+      style={{
+        width: `${canvasSize.width}px`,
+        height: `${canvasSize.height}px`,
+      }}
+    >
       {items.map((item) => (
         <Rnd
           key={item.id}
           size={{ width: item.size.width, height: item.size.height }}
           position={{ x: item.position.x, y: item.position.y }}
-          onDragStop={(e, d) =>
-            onUpdateItem(item.id, { position: { x: d.x, y: d.y } })
-          }
-          onResizeStop={(e, direction, ref, delta, position) =>
+          onDragStart={() => setActiveItem(item.id)}
+          onDragStop={(e, d) => {
+            onUpdateItem(item.id, { position: { x: d.x, y: d.y } });
+            setActiveItem(null);
+          }}
+          onResizeStop={(e, direction, ref, delta, position) => {
             onUpdateItem(item.id, {
               size: {
                 width: parseInt(ref.style.width),
                 height: parseInt(ref.style.height),
               },
               position,
-            })
-          }
+            });
+          }}
           bounds="parent"
-          className="bg-white shadow-lg"
+          className={`bg-white shadow-lg ${
+            activeItem === item.id ? "z-50" : "z-10"
+          }`}
           dragHandleClassName="drag-handle"
         >
           <div className="w-full h-full relative">
