@@ -15,6 +15,7 @@ interface CanvasProps {
   onUpdateItem: (id: string, updates: Partial<BoardItem>) => void;
   onDeleteItem: (id: string) => void;
   canvasSize: { width: number; height: number };
+  headerHeight: number;
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -22,9 +23,9 @@ const Canvas: React.FC<CanvasProps> = ({
   onUpdateItem,
   onDeleteItem,
   canvasSize,
+  headerHeight,
 }) => {
   const [activeItem, setActiveItem] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [maxZIndex, setMaxZIndex] = useState(items.length);
 
   const bringToFront = useCallback(
@@ -60,6 +61,7 @@ const Canvas: React.FC<CanvasProps> = ({
                   onUpdateItem(item.id, { content: e.currentTarget.innerHTML })
                 }
                 className="w-full h-full outline-none"
+                onClick={(e) => e.stopPropagation()}
               />
             </div>
           );
@@ -107,22 +109,21 @@ const Canvas: React.FC<CanvasProps> = ({
           position={{ x: item.position.x, y: item.position.y }}
           onDragStart={() => {
             setActiveItem(item.id);
-            setIsDragging(true);
             bringToFront(item.id);
           }}
-          onDrag={() => {
-            if (!isDragging) setIsDragging(true);
-          }}
-          onDragStop={(e, d) => {
+          onDrag={(e, d) => {
+            // Update position in real-time for smoother dragging
             onUpdateItem(item.id, { position: { x: d.x, y: d.y } });
+          }}
+          onDragStop={() => {
             setActiveItem(null);
-            setIsDragging(false);
           }}
           onResizeStart={() => {
             setActiveItem(item.id);
             bringToFront(item.id);
           }}
-          onResizeStop={(e, direction, ref, delta, position) => {
+          onResize={(e, direction, ref, delta, position) => {
+            // Update size in real-time for smoother resizing
             onUpdateItem(item.id, {
               size: {
                 width: parseInt(ref.style.width),
@@ -130,13 +131,18 @@ const Canvas: React.FC<CanvasProps> = ({
               },
               position,
             });
+          }}
+          onResizeStop={() => {
             setActiveItem(null);
           }}
           bounds="parent"
-          className={`bg-white shadow-lg transition-all duration-200 ${
+          className={`bg-white shadow-lg ${
             activeItem === item.id ? "ring-2 ring-blue-500" : ""
           }`}
-          style={{ zIndex: item.zIndex }}
+          style={{
+            zIndex: item.zIndex,
+            transition: "none", // Remove transition for instant updates
+          }}
           dragHandleClassName="drag-handle"
           enableUserSelectHack={false}
           resizeHandleStyles={{
@@ -150,7 +156,7 @@ const Canvas: React.FC<CanvasProps> = ({
             className="w-full h-full relative group"
             onClick={() => bringToFront(item.id)}
           >
-            <div className="drag-handle absolute -top-6 left-0 right-0 h-6 bg-gray-200 cursor-move flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="drag-handle absolute top-0 left-0 right-0 h-6 bg-gray-200 cursor-move flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <span className="text-xs font-bold text-gray-700">
                 {item.type.toUpperCase()}
               </span>
@@ -164,7 +170,7 @@ const Canvas: React.FC<CanvasProps> = ({
                 ×
               </button>
             </div>
-            <div className="w-full h-full overflow-hidden">
+            <div className="w-full h-full overflow-hidden pt-6">
               {renderItem(item)}
             </div>
           </div>

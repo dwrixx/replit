@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useState, useCallback } from "react";
 import Header from "./components/Header";
 import Canvas from "./components/Canvas";
@@ -12,6 +13,7 @@ interface BoardItem {
   content: string;
   position: { x: number; y: number };
   size: { width: number; height: number };
+  zIndex: number;
 }
 
 interface Board {
@@ -32,6 +34,7 @@ const App: React.FC = () => {
   const [font, setFont] = useState("Arial");
   const [fontSize, setFontSize] = useState(16);
   const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
+  const [headerHeight, setHeaderHeight] = useState(64); // Assuming header height is 64px
 
   const currentBoard = boards.find((board) => board.id === currentBoardId);
 
@@ -93,6 +96,7 @@ const App: React.FC = () => {
           content: e.target?.result as string,
           position: { x: 50, y: 50 },
           size: { width: 200, height: 200 },
+          zIndex: 0,
         });
       };
       reader.readAsDataURL(file);
@@ -106,6 +110,7 @@ const App: React.FC = () => {
       content: "New Text",
       position: { x: 50, y: 50 },
       size: { width: 200, height: 100 },
+      zIndex: 0,
     });
   };
 
@@ -116,6 +121,7 @@ const App: React.FC = () => {
       content: videoUrl,
       position: { x: 50, y: 50 },
       size: { width: 320, height: 180 },
+      zIndex: 0,
     });
     setShowVideoModal(false);
   };
@@ -190,9 +196,15 @@ const App: React.FC = () => {
         onToggleBoardSelector={() => setShowBoardSelector(!showBoardSelector)}
         onToggleSettings={() => setShowSettings(!showSettings)}
       />
-      <div className="flex flex-1 overflow-hidden">
+      <div
+        className="flex-1 overflow-hidden"
+        style={{ height: `calc(100vh - ${headerHeight}px)` }}
+      >
         {showBoardSelector && (
-          <div className="absolute top-16 left-0 z-10 bg-gray-800 p-4 rounded-br-lg shadow-lg">
+          <div
+            className="absolute left-0 z-10 bg-gray-800 p-4 rounded-br-lg shadow-lg"
+            style={{ top: `${headerHeight}px` }}
+          >
             <BoardSelector
               boards={boards}
               currentBoardId={currentBoardId}
@@ -201,7 +213,10 @@ const App: React.FC = () => {
           </div>
         )}
         {showSettings && (
-          <div className="absolute top-16 right-0 z-10 bg-gray-800 p-4 rounded-bl-lg shadow-lg">
+          <div
+            className="absolute right-0 z-10 bg-gray-800 p-4 rounded-bl-lg shadow-lg"
+            style={{ top: `${headerHeight}px` }}
+          >
             <SettingsPanel
               onNewBoard={handleNewBoard}
               onFontChange={handleFontChange}
@@ -210,12 +225,13 @@ const App: React.FC = () => {
             />
           </div>
         )}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-auto">
           <Canvas
             items={currentBoard?.items || []}
             onUpdateItem={updateBoardItem}
             onDeleteItem={deleteBoardItem}
             canvasSize={canvasSize}
+            headerHeight={headerHeight}
           />
         </div>
       </div>
@@ -229,6 +245,7 @@ const App: React.FC = () => {
               content: imageUrl,
               position: { x: 50, y: 50 },
               size: { width: 200, height: 200 },
+              zIndex: 0,
             });
             setShowAIGenerator(false);
           }}
